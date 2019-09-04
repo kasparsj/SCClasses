@@ -17,13 +17,6 @@ ControlledMixer {
 		channelControls = [];
 		chMutes = Array.fill(size, 0);
 		chMutesControl = Bus.control(server, size).setn(chMutes);
-		size.do { |i|
-			channels = channels.add(Bus.audio(server, numChannels));
-			channelControls = channelControls.add((
-				\vol: Bus.control(server).set(1),
-			));
-			master.add({ channels[i].ar * channelControls[i].vol.kr * (1.0 - chMutesControl.kr(1, i)) });
-		};
 		^super.newCopyArgs(
 			size,
 			master,
@@ -34,7 +27,26 @@ ControlledMixer {
 			Bus.control(server, 1).set(0),
 			chMutes,
 			chMutesControl,
-		);
+		).init;
+	}
+
+	init {
+		size.do { |i|
+			channels = channels.add(Bus.audio(master.server, master.numChannels));
+			channelControls = channelControls.add((
+				\vol: Bus.control(master.server).set(1),
+			));
+			master.add({ channels[i].ar * channelControls[i].vol.kr * (1.0 - chMutesControl.kr(1, i)) });
+		};
+		// it seems like SC is not freeing buses on CmdPeriod
+		CmdPeriod.doOnce {
+			master.clear;
+			channels.do { |c| c.free; };
+			masterControls.do { |c| c.free; };
+			channelControls.do { |c| c.values.do { |c1| c1.free; }; };
+			maMuteControl.free;
+			chMutesControl.free;
+		};
 	}
 
 	addMasterTarget { |target, slot = nil, controlName, defaultValue = 0|
