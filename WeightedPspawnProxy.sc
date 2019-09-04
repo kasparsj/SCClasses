@@ -43,10 +43,10 @@ WeightedPspawnProxy {
 		valueStream = valueProxy.asStream;
 	}
 
-	weighted { |preferred = nil|
+	weighted { |preferred = nil, prefWeight = 1|
 		var next = valueStream.next;
 		var prefFiltered = (preferred ? []).select({|i| config.weights[i] != 0});
-		([next].addAll(prefFiltered)).choose;
+		^(Array.fill((1/prefWeight).round.asInteger, next).addAll(prefFiltered)).choose;
 	}
 
 	play { |pattern|
@@ -54,6 +54,7 @@ WeightedPspawnProxy {
 			this.create(pattern);
 		};
 		player = pspawn.play(clock ? TempoClock.default, quant: quant.asQuant);
+		^player;
 	}
 
 	stop {

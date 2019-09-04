@@ -10,25 +10,30 @@ ControlledMixer {
 	var <chMutesControl;
 
 	*new { |size, server = nil, numChannels = 2|
-		var master, channels, chMutes;
+		var master, channels, channelControls, chMutes, chMutesControl;
 		server = (server ? Server.default);
 		master = NodeProxy.audio(server, numChannels);
 		channels = [];
+		channelControls = [];
+		chMutes = Array.fill(size, 0);
+		chMutesControl = Bus.control(server, size).setn(chMutes);
 		size.do { |i|
 			channels = channels.add(Bus.audio(server, numChannels));
-			master.add(channels[i]);
+			channelControls = channelControls.add((
+				\vol: Bus.control(server).set(1),
+			));
+			master.add({ channels[i].ar * channelControls[i].vol.kr * (1.0 - chMutesControl.kr(1, i)) });
 		};
-		chMutes = Array.fill(size, 0);
 		^super.newCopyArgs(
 			size,
 			master,
 			channels,
 			(),
-			Array.fill(size, { () }),
+			channelControls,
 			0,
 			Bus.control(server, 1).set(0),
 			chMutes,
-			Bus.control(server, size).setn(chMutes),
+			chMutesControl,
 		);
 	}
 
