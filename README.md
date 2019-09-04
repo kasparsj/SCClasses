@@ -1,0 +1,2 @@
+# SCClasses
+SuperCollider classes
