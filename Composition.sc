@@ -103,4 +103,33 @@ Composition {
 			track.asPattern;
 		}, track);
 	}
+
+	mapToEvent { |protoEvent, dict|
+		var newTracks = ();
+		dict = dict.asDict;
+		tracks.pairsDo { |key, track|
+			if (track.class == Composition) {
+				newTracks[key] = track.mapToEvent(protoEvent, dict);
+			} {
+				newTracks[key] = track.copy;
+				if (dict[key] != nil) {
+					newTracks[key].patternpairs = newTracks[key].patternpairs.addAll([
+						\mapFunc, Pfunc { |event|
+							var mappedEvent = protoEvent.copy;
+							mappedEvent[\dur] = event[\dur];
+							mappedEvent[\amp] = event[\amp];
+							mappedEvent.putPairs(dict[key].value(event));
+							mappedEvent.play;
+							true;
+						}
+					]);
+				};
+			}
+		};
+		^this.copy.tracks_(newTracks);
+	}
+
+	mapToOsc {
+		// todo: implement
+	}
 }
