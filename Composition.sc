@@ -1,16 +1,34 @@
 Composition {
 	var <type;
+	var <players;
 	var <tracks;
 	var <times;
 	var <weights;
 	var <>repeats = 1;
+	var <>clock;
+	var <>quant;
 
 	*new { |tracks = nil|
-		^super.newCopyArgs(Ppar).tracks_(tracks);
+		^super.newCopyArgs(Ppar, []).tracks_(tracks);
 	}
 
 	play { |clock, protoEvent, quant|
-		this.asPtpar.play(clock, protoEvent, quant);
+		this.prPlay(this.asPattern, clock, protoEvent, quant);
+	}
+
+	playTrack { |key, clock, protoEvent, quant|
+		this.prPlay(this.prTrack(tracks[key], clock, protoEvent, quant));
+	}
+
+	prPlay { |pattern, clock, protoEvent, quant|
+		players = players.add(pattern.play((clock ? this.clock), protoEvent, (quant ? this.quant)));
+	}
+
+	stop {
+		if (players.size > 0) {
+			players.do { |p| p.stop };
+			players = [];
+		};
 	}
 
 	tracks_ { |newTracks|
