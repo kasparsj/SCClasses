@@ -52,7 +52,7 @@ Composition {
 		^Ppar(tracks, repeats);
 	}
 
-	asPtpar { |times, tracks, repeats|
+	asPtpar { |tracks, repeats, times|
 		times = (times ? this.times).asArray;
 		tracks = (tracks ? this.tracks).asDict;
 		repeats = repeats ? this.repeats;
@@ -64,7 +64,7 @@ Composition {
 		^Ptpar(times, repeats);
 	}
 
-	asPwrand { |weights, tracks, repeats|
+	asPwrand { |tracks, repeats, weights|
 		var tracksArray, weightsArray;
 		weights = (weights ? this.weights).asArray;
 		tracks = (tracks ? this.tracks).asDict;
@@ -77,7 +77,7 @@ Composition {
 				weightsArray = weightsArray.add(value);
 			};
 		};
-		^Pwrand(tracksArray, weightsArray, repeats);
+		^Pwrand(tracksArray, weightsArray.normalizeSum, repeats);
 	}
 
 	prTrack { |track|
