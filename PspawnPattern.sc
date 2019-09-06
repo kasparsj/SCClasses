@@ -10,7 +10,6 @@ PspawnPattern {
 	asPfunc {
 		^Pfunc {
 			if (counter >= repeats) {
-				"limit reached".postln;
 				nil;
 			} {
 				counter = counter + 1;
