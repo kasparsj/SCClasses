@@ -9,8 +9,6 @@ WeightedPspawnProxy {
 	var <player;
 	var <method;
 	var <pspawn;
-	var <>clock;
-	var <>quant = 1;
 
 	*initClass {
 		allMethods = [\seq, \par];
@@ -49,11 +47,8 @@ WeightedPspawnProxy {
 		^(Array.fill((1/prefWeight).round.asInteger, next).addAll(prefFiltered)).choose;
 	}
 
-	play { |pattern|
-		if ((pspawn == nil) || (config.method != method)) {
-			this.create(pattern);
-		};
-		player = pspawn.play(clock ? TempoClock.default, quant: quant.asQuant);
+	play { |pattern, clock, quant|
+		player = this.getPspawn(pattern).play(clock ? TempoClock.default, quant: quant.asQuant);
 		^player;
 	}
 
@@ -64,7 +59,14 @@ WeightedPspawnProxy {
 		};
 	}
 
-	create { |pattern|
+	getPspawn { |pattern|
+		if ((pspawn == nil) || (config.method != method)) {
+			this.createPspawn(pattern);
+		};
+		^pspawn;
+	}
+
+	createPspawn { |pattern|
 		this.stop;
 		pspawn = Pspawn(Pbind(
 			\method, config.method,
@@ -72,6 +74,7 @@ WeightedPspawnProxy {
 			\delta, deltaProxy,
 		));
 		method = config.method;
+		^pspawn;
 	}
 }
 
