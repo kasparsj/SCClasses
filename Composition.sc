@@ -113,7 +113,11 @@ Composition {
 			} {
 				newTracks[key] = track.copy;
 				if (dict[key] != nil) {
-					newTracks[key].patternpairs = newTracks[key].patternpairs.addAll([
+					var pbind = newTracks[key];
+					if (pbind.respondsTo(\patternpairs).not) {
+						pbind = pbind.pattern;
+					};
+					pbind.patternpairs = pbind.patternpairs.addAll([
 						\mapFunc, Pfunc { |event|
 							var mappedEvent = protoEvent.copy;
 							mappedEvent[\dur] = event[\dur];
