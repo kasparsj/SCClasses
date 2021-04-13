@@ -17,6 +17,14 @@ Tracks {
 		players = ();
 	}
 
+	at { |key|
+		^tracks[key];
+	}
+
+	put { |key, value|
+		tracks[key] = value;
+	}
+
 	play { |which = nil, clock = nil|
 		which = which ? tracks.keys;
 		clock = clock ? defaultClock;
