@@ -19,20 +19,34 @@ Tracks {
 
 	play { |which = nil, clock = nil|
 		which = which ? tracks.keys;
+		clock = clock ? defaultClock;
 		which.do { |key|
-			if (players[key].isPlaying.not) {
-				players[key] = tracks[key].play(clock ? defaultClock);
+			if (players[key] != nil) {
+				if (players[key].clock != (clock ? TempoClock.default)) {
+					this.prStop(key);
+				};
 			};
+			players[key] = tracks[key].play(clock);
 		};
+	}
+
+	playOnly { |which = nil, clock = nil|
+		this.stop;
+		this.play(which, clock);
 	}
 
 	stop { |which = nil|
 		which = which ? tracks.keys;
 		which.do { |key|
 			if (players[key] != nil) {
-				players[key].stop;
+				this.prStop(key);
 			};
 		};
+	}
+
+	prStop { |key|
+		players[key].stop;
+		players.removeAt(key);
 	}
 
 }

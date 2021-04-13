@@ -18,34 +18,44 @@ Timeline {
 	}
 
 	init {
-
+		if (clock.permanent.not) {
+			"Timeline: clock is not permanent".postln;
+		};
+		CmdPeriod.add { this.deinit(); }
 	}
 
-	play { |section_ = 0, repeats_ = 1|
+	deinit {
+		isPlaying = false;
+	}
+
+	play { |section_ = 0, repeats_ = 1, quant_ = nil|
 		repeats = repeats_;
-		repeat = 0;
-		(playFunc ? {}).value;
-		this.goto(section_);
+		if (isPlaying.not) {
+			repeat = 0;
+			(playFunc ? {}).value;
+			this.goto(section_, quant_);
+		};
 	}
 
 	stop {
+		// todo: not sure this is a good idea
 		clock.clear;
 		isPlaying = false;
 		(stopFunc ? {}).value;
 	}
 
-	goto { |section_|
+	goto { |section_, quant_ = nil|
 		section = section_;
 		isPlaying = true;
-		clock.play(this.play_, quant);
+		clock.play({ this.prPlay() }, quant_ ? quant);
 	}
 
-	play_ {
+	prPlay {
+		var beats = sections[(section*2)];
+		"Timeline: playing section % for %".format(section, beats).postln;
 		clock.clear;
-		"playing % (%)".format(section, clock.beats).postln;
 		sections[(section*2)+1].value;
-		"scheduling %".format(sections[(section*2)]).postln;
-		clock.sched(sections[(section*2)], { this.next() });
+		clock.sched(beats, { this.next() });
 	}
 
 	next {
@@ -60,7 +70,7 @@ Timeline {
 		if (isPlaying.not) {
 			this.goto(section);
 		} {
-			this.play_();
+			this.prPlay();
 		};
 	}
 
