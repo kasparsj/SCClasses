@@ -1,6 +1,6 @@
 Timeline {
 
-	var <sections;
+	var <>sections;
 	var <clock;
 	var <quant;
 	var <>playFunc;
@@ -30,31 +30,33 @@ Timeline {
 
 	play { |section_ = 0, repeats_ = 1, quant_ = nil|
 		repeats = repeats_;
-		if (isPlaying.not) {
-			repeat = 0;
-			(playFunc ? {}).value;
-			this.goto(section_, quant_);
-		};
+		repeat = 0;
+		(playFunc ? {}).value;
+		this.goto(section_, quant_);
 	}
 
 	stop {
+		this.prStop;
+		loopTl = nil;
+		(stopFunc ? {}).value;
+	}
+
+	prStop {
 		// todo: not sure it's a good idea to clear the clock
 		clock.clear;
 		isPlaying = false;
-		(stopFunc ? {}).value;
 	}
 
 	goto { |section_, quant_ = nil|
 		section = section_;
-		isPlaying = true;
 		clock.play({ this.prPlay() }, quant_ ? quant);
 	}
 
 	prPlay {
 		var beats = sections[(section*2)];
 		"Timeline: playing section % for %".format(section, beats).postln;
-		// todo: not sure it's a good idea to clear the clock
-		clock.clear;
+		this.prStop;
+		isPlaying = true;
 		sections[(section*2)+1].value;
 		clock.sched(beats, { this.next() });
 	}
@@ -84,7 +86,7 @@ Timeline {
 		this.goto(section);
 	}
 
-	loop { |section_, repeats_ = inf|
+	loop { |section_, quant_ = nil, repeats_ = inf|
 		var secs = [];
 		if (section_.isArray.not, {
 			section_ = [section_];
@@ -92,7 +94,15 @@ Timeline {
 		section_.do {|sec|
 			secs = secs.addAll([sections[sec*2], sections[(sec*2)+1]]);
 		};
-		loopTl = Timeline.new(secs, clock, quant);
-		loopTl.play(0, repeats_);
+		isPlaying = true;
+		if (loopTl == nil) {
+			loopTl = Timeline.new(secs, clock, quant_ ? quant);
+			loopTl.playFunc = playFunc;
+			//loopTl.stopFunc = stopFunc;
+			loopTl.play(0, repeats_);
+		} {
+			loopTl.sections = secs;
+			loopTl.goto(0);
+		};
 	}
 }
