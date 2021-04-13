@@ -39,6 +39,10 @@ Tracks {
 		};
 	}
 
+	except { |which|
+		^(tracks.keys - (if (which.isSymbol, { [which] }, { which }).asSet));
+	}
+
 	prStop { |key|
 		players[key].stop;
 		players.removeAt(key);
