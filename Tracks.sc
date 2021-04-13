@@ -30,11 +30,6 @@ Tracks {
 		};
 	}
 
-	playOnly { |which = nil, clock = nil|
-		this.stop;
-		this.play(which, clock);
-	}
-
 	stop { |which = nil|
 		which = which ? tracks.keys;
 		which.do { |key|

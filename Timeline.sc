@@ -38,7 +38,7 @@ Timeline {
 	}
 
 	stop {
-		// todo: not sure this is a good idea
+		// todo: not sure it's a good idea to clear the clock
 		clock.clear;
 		isPlaying = false;
 		(stopFunc ? {}).value;
@@ -53,6 +53,7 @@ Timeline {
 	prPlay {
 		var beats = sections[(section*2)];
 		"Timeline: playing section % for %".format(section, beats).postln;
+		// todo: not sure it's a good idea to clear the clock
 		clock.clear;
 		sections[(section*2)+1].value;
 		clock.sched(beats, { this.next() });
