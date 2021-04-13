@@ -53,7 +53,7 @@ Timeline {
 
 	prPlay {
 		var beats = sections[(section*2)];
-		"Timeline: playing section % for %".format(section, beats).postln;
+		//"Timeline: playing section % for %".format(section, beats).postln;
 		this.prStop;
 		this.prSetIsPlaying;
 		sections[(section*2)+1].value;
