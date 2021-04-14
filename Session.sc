@@ -1,6 +1,7 @@
 Session {
 	classvar <instances;
 
+	var <name;
 	var <clips;
 	var <defaultClock;
 	var <players;
@@ -12,10 +13,11 @@ Session {
 
 	*new { |name, clips, clock = nil|
 		var instance = instances[name.asSymbol];
+		name = name.asSymbol;
 		if (instance == nil) {
-			instance = super.newCopyArgs(clips);
+			instance = super.newCopyArgs(name, clips);
 			instance.init();
-			instances[name.asSymbol] = instance;
+			instances[name] = instance;
 			//CmdPeriod.add { instance.deinit(); }
 		} {
 			instance.clips_(clips);

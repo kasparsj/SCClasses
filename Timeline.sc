@@ -1,6 +1,7 @@
 Timeline {
 	classvar <instances;
 
+	var <name;
 	var <sections;
 	var <clock;
 	var <quant;
@@ -19,9 +20,10 @@ Timeline {
 
 	*new { |name, sections, clock, quant = 1|
 		var instance = instances[name.asSymbol];
+		name = name.asSymbol;
 		if (instance == nil) {
-			instance = super.newCopyArgs(sections);
-			instances[name.asSymbol] = instance;
+			instance = super.newCopyArgs(name, sections);
+			instances[name] = instance;
 			CmdPeriod.add { instance.deinit(); }
 		} {
 			instance.sections_(sections);
@@ -118,13 +120,8 @@ Timeline {
 			secs = secs.addAll(this.at(sec));
 		};
 		this.prSetIsPlaying;
-		if (loopTl == nil) {
-			loopTl = Timeline.new(secs, clock, quant_ ? quant);
-			loopTl.play(0, repeats_);
-		} {
-			loopTl.sections = secs;
-			loopTl.goto(0);
-		};
+		loopTl = Timeline(name.asString ++ "_loop", secs, clock, quant_ ? quant);
+		loopTl.play(0, repeats_);
 	}
 
 	at { |key|
