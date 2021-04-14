@@ -3,6 +3,7 @@ Tracks {
 	var <tracks;
 	var <defaultClock;
 	var <players;
+	var <mutes;
 
 	*new { |tracks, clock = nil|
 		var instance = super.newCopyArgs(tracks, clock);
@@ -15,6 +16,7 @@ Tracks {
 			tracks = Dictionary.newFrom(tracks);
 		});
 		players = ();
+		mutes = Set[];
 	}
 
 	at { |key|
@@ -36,6 +38,7 @@ Tracks {
 			};
 			players[key] = tracks[key].play(clock);
 		};
+		this.prMuteUnmute;
 	}
 
 	stop { |which = nil|
@@ -45,6 +48,32 @@ Tracks {
 				this.prStop(key);
 			};
 		};
+	}
+
+	mute { |which|
+		mutes = mutes ++ (if (which.isSymbol, { [which] }, { which }).asSet);
+		this.prMuteUnmute;
+	}
+
+	solo { |which|
+		mutes = this.except(which).asSet;
+		this.prMuteUnmute
+	}
+
+	unmute { |which = nil|
+		which = (if (which.isSymbol, { [which] }, { which });
+		mutes = mutes - (which ? tracks.keys).asSet);
+		this.prMuteUnmute;
+	}
+
+	prMuteUnmute {
+		players.keys.do { |key|
+			if (mutes.includes(key)) {
+				players[key].mute;
+			} {
+				players[key].unmute;
+			};
+		}
 	}
 
 	except { |which|
