@@ -17,7 +17,7 @@ Timeline {
 		instances = ();
 	}
 
-	*new { |sections, clock, quant = 1, name = \main|
+	*new { |name, sections, clock, quant = 1|
 		var instance = instances[name.asSymbol];
 		if (instance == nil) {
 			instance = super.newCopyArgs(sections);

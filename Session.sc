@@ -10,7 +10,7 @@ Session {
 		instances = ();
 	}
 
-	*new { |clips, clock = nil, name = \main|
+	*new { |name, clips, clock = nil|
 		var instance = instances[name.asSymbol];
 		if (instance == nil) {
 			instance = super.newCopyArgs(clips);
