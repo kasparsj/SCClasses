@@ -1,17 +1,18 @@
 Timeline {
 
-	var <>sections;
+	var <sections;
 	var <clock;
 	var <quant;
 	var <>playFunc;
 	var <>stopFunc;
 	var <isPlaying = false;
-	var <section = -1;
+	var <currentSection = -1;
+	var <currentLoop;
 	var <repeats = 1;
 	var repeat;
 	var loopTl;
 
-	*new { |sections, clock, quant = 1, playFunc = nil, stopFunc = nil|
+	*new { |clock, sections = nil, quant = 1, playFunc = nil, stopFunc = nil|
 		var instance = super.newCopyArgs(sections, clock, quant, playFunc, stopFunc);
 		instance.init();
 		^instance;
@@ -19,8 +20,9 @@ Timeline {
 
 	init {
 		if (clock.permanent.not) {
-			"Timeline: clock is not permanent".postln;
+			"TL: clock is not permanent".postln;
 		};
+		sections = sections ? [];
 		CmdPeriod.add { this.deinit(); }
 	}
 
@@ -44,20 +46,24 @@ Timeline {
 	prStop {
 		// todo: not sure it's a good idea to clear the clock
 		clock.clear;
+		if (loopTl != nil, {
+			loopTl.stop;
+			currentLoop = nil;
+		});
 	}
 
 	goto { |section_, quant_ = nil|
-		section = section_;
+		currentSection = this.index(section_);
 		clock.play({ this.prPlay() }, quant_ ? quant);
 	}
 
 	prPlay {
-		var beats = sections[(section*2)];
-		//"Timeline: playing section % for %".format(section, beats).postln;
+		var section = this.at(currentSection);
+		"TL: playing % for %".format(section[0], section[1]).postln;
 		this.prStop;
 		this.prSetIsPlaying;
-		sections[(section*2)+1].value;
-		clock.sched(beats, { this.next() });
+		section[2].value;
+		clock.sched(section[1], { this.next() });
 	}
 
 	prSetIsPlaying {
@@ -68,37 +74,42 @@ Timeline {
 	}
 
 	next {
-		section = section + 1;
-		if (section >= (sections.size / 2), {
+		currentSection = currentSection + 1;
+		if (currentSection >= (sections.size / 3), {
 			repeat = repeat + 1;
 			if (repeat >= repeats, {
 				^this.stop;
 			});
-			section = 0;
+			currentSection = 0;
 		});
 		if (isPlaying.not) {
-			this.goto(section);
+			this.goto(currentSection);
 		} {
 			this.prPlay();
 		};
 	}
 
 	prev {
-		section = section - 1;
-		if (section < 0) {
+		currentSection = currentSection - 1;
+		if (currentSection < 0) {
 			repeat = repeat - 1;
-			section = (sections.size / 2) - 1
+			currentSection = (sections.size / 3) - 1
 		};
-		this.goto(section);
+		this.goto(currentSection);
 	}
 
 	loop { |section_, quant_ = nil, repeats_ = inf|
-		var secs = [];
 		if (section_.isArray.not, {
 			section_ = [section_];
 		});
-		section_.do {|sec|
-			secs = secs.addAll([sections[sec*2], sections[(sec*2)+1]]);
+		currentLoop = section_;
+		this.prLoop(quant_, repeats_);
+	}
+
+	prLoop { |quant_ = nil, repeats_ = nil|
+		var secs = [];
+		currentLoop.do { |sec|
+			secs = secs.addAll(this.at(sec));
 		};
 		this.prSetIsPlaying;
 		if (loopTl == nil) {
@@ -107,6 +118,46 @@ Timeline {
 		} {
 			loopTl.sections = secs;
 			loopTl.goto(0);
+		};
+	}
+
+	at { |key|
+		var idx = this.index(key);
+		^[sections[(idx*3)], sections[((idx*3)+1)], sections[((idx*3)+2)]];
+	}
+
+	put { |key, value|
+		var idx = this.index(key);
+		if (idx != nil) {
+			sections[(idx*3)] = key;
+			sections[((idx*3)+1)] = value[0];
+			sections[((idx*3)+2)] = value[1];
+		} {
+			sections = sections.addAll([key, value[0], value[1]]);
+		};
+	}
+
+	index { |key|
+		^if (key.isSymbol, {
+			block { |break|
+				(sections.size / 3).do { |i|
+					if (sections[(i*3)] == key) {
+						break.value(i);
+					};
+				};
+				break.value(nil);
+			};
+		}, { key });
+	}
+
+	sections_ { |values|
+		sections = values;
+		if (isPlaying) {
+			if ((loopTl != nil) && (loopTl.isPlaying)) {
+				this.prLoop(loopTl.quant, loopTl.repeats);
+			} {
+				this.prPlay;
+			};
 		};
 	}
 }
