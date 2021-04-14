@@ -1,4 +1,5 @@
 Timeline {
+	classvar <instances;
 
 	var <sections;
 	var <clock;
@@ -12,18 +13,23 @@ Timeline {
 	var repeat;
 	var loopTl;
 
-	*new { |clock, sections = nil, quant = 1, playFunc = nil, stopFunc = nil|
-		var instance = super.newCopyArgs(sections, clock, quant, playFunc, stopFunc);
-		instance.init();
-		^instance;
+	*initClass {
+		instances = ();
 	}
 
-	init {
-		if (clock.permanent.not) {
-			"TL: clock is not permanent".postln;
+	*new { |sections, clock, quant = 1, name = \main|
+		var instance = instances[name.asSymbol];
+		if (instance == nil) {
+			instance = super.newCopyArgs(sections);
+			instances[name.asSymbol] = instance;
+			CmdPeriod.add { instance.deinit(); }
+		} {
+			instance.sections_(sections);
+
 		};
-		sections = sections ? [];
-		CmdPeriod.add { this.deinit(); }
+		instance.clock_(clock);
+		instance.quant_(quant);
+		^instance;
 	}
 
 	deinit {
@@ -159,5 +165,16 @@ Timeline {
 				this.prPlay;
 			};
 		};
+	}
+
+	clock_ { |value|
+		clock = value;
+		if (clock.permanent.not) {
+			"TL: clock is not permanent".postln;
+		};
+	}
+
+	quant_ { |value|
+		quant = value;
 	}
 }
