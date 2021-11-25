@@ -119,11 +119,14 @@ Composition {
 					};
 					pbind.patternpairs = pbind.patternpairs.addAll([
 						\mapFunc, Pfunc { |event|
-							var mappedEvent = protoEvent.copy;
-							mappedEvent[\dur] = event[\dur];
-							mappedEvent[\amp] = event[\amp];
-							mappedEvent.putPairs(dict[key].value(event));
-							mappedEvent.play;
+							var pairs = dict[key].value(event);
+							if (pairs != nil) {
+								var mappedEvent = protoEvent.copy;
+								mappedEvent[\dur] = event[\dur];
+								mappedEvent[\amp] = event[\amp];
+								mappedEvent.putPairs(pairs);
+								mappedEvent.play;
+							};
 							true;
 						}
 					]);

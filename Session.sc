@@ -6,6 +6,7 @@ Session {
 	var <defaultClock;
 	var <players;
 	var <mutes;
+	var gui;
 
 	*initClass {
 		instances = ();
@@ -108,5 +109,9 @@ Session {
 
 	clock_ { |value|
 		defaultClock = value;
+	}
+
+	gui {
+		gui = SessionGui.new(this);
 	}
 }
