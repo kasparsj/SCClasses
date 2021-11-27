@@ -1,7 +1,6 @@
 ProxySpaceScope {
 	var <proxySpace;
 	var <scopes;
-	var <names;
 	var <window;
 	var <routine;
 
@@ -11,14 +10,13 @@ ProxySpaceScope {
 
 	init {
 		scopes = ();
-		names = ();
 		this.createWindow;
 		this.onResize;
 		this.forkUpdate;
 	}
 
 	createWindow {
-		window = Window.new("ProxySpaceScope", Rect(20, 20, 400, 500));
+		window = Window.new("ProxySpaceScope", Rect(20, 20, 400, 500), scroll: true);
 		window.view.decorator = FlowLayout(window.view.bounds, 10@5, 20@5);
 		window.view.onResize = { |view|
 			this.onResize;
@@ -70,8 +68,11 @@ ProxySpaceScope {
 		proxySpace.envir.do { |proxy|
 			if (proxy.rate == \audio, {
 				if (scopes[proxy.bus.index] == nil, {
-					scopes[proxy.bus.index] = Stethoscope.new(proxySpace.server, proxy.numChannels, proxy.bus.index, rate: proxy.rate, view:window.view);
-					names[proxy.bus.index] = proxy.asCompileString;
+					var view = View(window.view, 200@200);
+					view.layout = VLayout(
+						StaticText(view, 200@20).string_(proxy.asCompileString),
+					);
+					scopes[proxy.bus.index] = Stethoscope(proxySpace.server, proxy.numChannels, proxy.bus.index, rate: proxy.rate, view: view);
 				}, {
 					stale.remove(proxy.bus.index);
 				});
@@ -84,7 +85,6 @@ ProxySpaceScope {
 		indexes.do { |index|
 			scopes[index].free;
 			scopes.removeAt(index);
-			names.removeAt(index);
 		}
 	}
 }
