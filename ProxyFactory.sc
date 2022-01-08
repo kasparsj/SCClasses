@@ -5,12 +5,19 @@ ProxyFactory {
 		server = Server.default;
 	}
 
-	*ar { |numChannels = 1|
-		^NodeProxy.audio(server, numChannels);
+	*ar { |numChannels = 1|ProxySpace
+		^this.prInit(NodeProxy.audio(server, numChannels));
 	}
 
 	*kr { |numChannels = 1|
-		^NodeProxy.control(server, numChannels);
+		^this.prInit(NodeProxy.control(server, numChannels));
+	}
+
+	*prInit { |proxy|
+		if (currentEnvironment.respondsTo(\initProxy)) {
+			currentEnvironment.initProxy(proxy);
+		}
+		^proxy;
 	}
 
 	*mul { |source, mul|
@@ -84,7 +91,7 @@ ProxyFactory {
 		var source = { |size, cps = false|
 			var code = [
 				"var which = LFNoise0.kr(\\freq.kr).range(0, " ++ (size-1).asString ++ ").round;",
-				"(\\root.kr + Select.kr(which, \\degrees.kr(" ++ (0..(size-1)).asString ++"))) * \\harmonic.kr(1)" ++ if(cps, { ".midicps" }, { "" }) ++ ";",
+				"(\\root.kr + Select.kr(which, \\degrees.kr(" ++ (0..(size-1)).asString ++")))" ++ if(cps, { ".midicps" }, { "" }) ++ " * \\harmonic.kr(1);",
 			];
 			code.join("\n").compile;
 		};
