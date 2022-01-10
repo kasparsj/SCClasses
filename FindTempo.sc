@@ -4,7 +4,7 @@ FindTempo {
 	var <tempoStep;
 
 	*new { |minTempo, maxTempo, tempoStep|
-		^super.newCopyArgs(minTempo ? 60, maxTempo ? 160, tempoStep ? 0.05);
+		^super.newCopyArgs(minTempo ? 60, maxTempo ? 160, tempoStep ? 1);
 	}
 
 	rms { |markers|
