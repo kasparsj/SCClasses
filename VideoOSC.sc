@@ -32,7 +32,7 @@ VideoOSC {
 	}
 
 	addMarkers { |times, labels|
-		times.d { |time, i|
+		times.do { |time, i|
 			this.addMarker(time, labels[i]);
 		};
 	}
