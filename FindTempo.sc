@@ -59,6 +59,19 @@ FindTempo {
 		^errors;
 	}
 
+	beats { |bpmTempo, markers|
+		var beats = [];
+		var prevBeats = 0;
+		if (markers.size > 1) {
+			(1..(markers.size-1)).do { |i|
+				var numBeats = markers[i] * (bpmTempo / 60);
+				beats = beats.add(numBeats - prevBeats);
+				prevBeats = numBeats;
+			};
+		};
+		^beats;
+	}
+
 	tempos {
 		var numTempos = (maxTempo - minTempo) / tempoStep;
 		var tempos = [];

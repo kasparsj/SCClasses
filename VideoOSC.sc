@@ -1,10 +1,19 @@
 VideoOSC {
 	var <net;
+	var <path;
 	var <>start;
 
-	*new { |net, start|
-		start = start ? 0;
-		^super.newCopyArgs(net, start);
+	*new { |net, path, start|
+		var inst = super.newCopyArgs(net).start_(start ? 0);
+		if (path != nil, {
+			inst.load(path);
+		});
+		^inst;
+	}
+
+	load { |value|
+		path = value;
+		net.sendMsg("/load", path);
 	}
 
 	play { |from, to|
