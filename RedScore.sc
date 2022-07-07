@@ -23,7 +23,12 @@ RedScore {
 			};
 			keys.do { |key|
 				if (key != nil) {
-					RedMst.at(key).addSections(section);
+					var mst = RedMst.at(key);
+					if (mst != nil) {
+						mst.addSections(section);
+					} {
+						"RedScore: section % does not exist".format(key.asString).throw;
+					}
 				};
 			}
 		};
