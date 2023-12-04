@@ -172,3 +172,39 @@ SwarmSynth {
         ^params.asString;
 	}
 }
+
+/* additive synth example
+(
+SynthDef(\harmonic, {|out=0, freq=440, detune=0.3, lfo=0.1, fadeTime=1, gate=1, amp=1|
+	var amp2 = amp, detune2 = detune, freq2 = freq, phase, sig, pan, lfo2 = lfo, env;
+	env = EnvGen.kr(Env.adsr(fadeTime, 0.001, 1, fadeTime), gate, doneAction: 2);
+	lfo2 = LFNoise0.kr(lfo2, 1.0);
+	amp2 = LFNoise1.kr(lfo2, amp2);
+	amp2 = LFNoise1.kr(lfo2, amp2);
+	detune2 = LFNoise1.kr(lfo2, detune2).bipolar.midiratio;
+	freq2 = freq2 * detune2;
+	phase = LFNoise1.kr(lfo2).range(-2pi, 2pi);
+	sig = SinOsc.ar(freq2, phase, amp2);
+	sig = HPF.ar(sig, 100);
+	sig = RLPF.ar(sig, 10000, 50);
+	pan = LFNoise1.kr(lfo2).range(-1, 1);
+	sig = Pan2.ar(sig, pan);
+	Out.ar(0, sig * env);
+}).add;
+)
+(
+var root = 36.midicps;
+var harmonics = 10;
+harmonics.do { |i|
+	var bf = 20;
+	bf.do { |j|
+		var freq, amp, phase, pan;
+		freq = root * ((1+i*0.75)**2)+exprand(0.1, 2);
+		amp = 1/(i+1)*0.1;
+		phase = rrand(-2pi, 2pi);
+		pan = rrand(-1, 1);
+		~swarm.xset({[freq: freq, amp: amp, phase: phase, pan: pan]}, i*bf+j);
+	};
+}
+)
+*/
