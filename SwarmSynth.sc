@@ -159,7 +159,7 @@ SwarmSynth {
 
 	removeNil {
 		var i = this.size - 1;
-		while (i >= 0) {
+		while ({ i >= 0 }) {
 			if (synths[i].isNil) {
 				synths.removeAt(i);
 				params.removeAt(i);
