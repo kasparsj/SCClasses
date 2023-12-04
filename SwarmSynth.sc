@@ -5,108 +5,168 @@ SwarmSynth {
 		^super.newCopyArgs(synthDef, defaultParams, [], []);
     }
 
-	parseParams { |i, params|
+	parseParams { |i, params, j|
 		if (params.isFunction) {
-			^params.(i);
+			^params.(i, this.params[i], j);
 		} {
 			^if (params.notNil, params, []);
 		}
 	}
 
 	mergeParams { |p1, p2|
-		var dict = Dictionary.newFrom(p1);
-		p2.pairsDo { |key, value|
+		var dict = Dictionary.newFrom(p1 ? []);
+		(p2 ? []).pairsDo { |key, value|
 			dict.put(key, value);
 		};
 		^dict.asPairs;
 	}
 
-	prRealParams { |i, params|
-		^this.mergeParams(this.parseParams(i, this.defaultParams), this.parseParams(i, params));
-	}
-
 	prUpdateParams { |i, parsedParams|
+		var size = this.params.size;
+		if (i >= size) {
+			this.params = this.params.addAll(Array.fill(i+1-size, nil));
+		};
 		this.params[i] = this.mergeParams(this.params[i], parsedParams);
 	}
 
-    prCreateSynth { |params|
-        ^Synth(this.synthDef, params);
+    prCreateSynth { |i, params|
+		var size = synths.size;
+		if (i >= size) {
+			this.synths = this.synths.addAll(Array.fill(i+1-size, nil));
+		};
+		this.synths[i] = Synth(this.synthDef, params);
+		this.prUpdateParams(i, params);
     }
+
+	prUpdateSynth { |i, params|
+		synths[i].set(*params);
+		this.prUpdateParams(i, params);
+	}
+
+	prSet { |i, params, j=0, createIfNotExists=true|
+		var parsed;
+		if (synths[i].isNil) {
+			if (createIfNotExists) {
+				parsed = this.mergeParams(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
+				this.prCreateSynth(i, parsed);
+			}
+		} {
+			parsed = this.parseParams(i, params, j);
+			this.prUpdateSynth(i, parsed);
+		};
+	}
+
+	prXset { |i, params, j=0|
+		var merged = this.mergeParams(this.params[i], this.parseParams(i, params, j));
+		this.closeGate(i);
+		this.set(merged, i);
+	}
 
 	size {
 		^synths.size;
 	}
 
-	add { |num, params|
-		num.do {
-			var realParams = this.prRealParams(this.size, params);
-			this.params = this.params.add(realParams);
-			this.synths = this.synths.add(this.prCreateSynth(realParams));
+	add { |params, num=1, at=nil|
+		if (at.isNil) {
+			at = this.size;
+		};
+		num.do { |i|
+			this.set(params, (at + i));
 		};
 	}
 
-	addAt { |i, num, params|
-		num.do {
-			var realParams = this.prRealParams(i, params);
-			this.params = this.params.insert(i, realParams);
-			this.synths = this.synths.insert(i, this.prCreateSynth(realParams));
+    set { |params, from, to, createIfNotExists=true|
+		var parsed;
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
+		};
+		if (to.isNil) {
+			this.prSet(from, params, 0, createIfNotExists);
+		} {
+			(from..to).do { |i, j|
+				this.prSet(i, params, j, createIfNotExists);
+			};
 		};
 	}
 
-	drop { |num|
-		var newNumSynths = this.size - num;
-		synths.drop(newNumSynths).do { |synth|
-			synth.set(\gate, 0);
+	xset { |params, from, to|
+		var merged;
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
 		};
-		synths = synths.keep(newNumSynths);
-		params = params.keep(newNumSynths);
+		if (to.isNil) {
+			this.prXset(from, params, 0);
+		} {
+			(from..to).do { |i, j|
+				this.prXset(i, params, j);
+			};
+		};
 	}
 
-    set { |i, params|
-        if(i < this.size, {
-			var parsed = this.parseParams(i, params);
-			synths[i].set(*parsed);
-			this.prUpdateParams(i, parsed);
-        });
+	fadeIn { |amp=1, from, to|
+		this.set([\amp, amp], from, to, false);
+	}
+
+	fadeOut { |from, to|
+		this.set([\amp, 0], from, to, false);
+	}
+
+	prClose { |i|
+		if (i >= 0 and: { i < this.size }) {
+			synths[i] = nil;
+			params[i] = nil;
+		};
+	}
+
+    closeGate { |from, to|
+		this.set([\gate, 0], from, to, false);
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
+		};
+		// release will happen automatically after fadeTime
+		if (to.isNil) {
+			this.prClose(from);
+		} {
+			(from..to).do { |i, j|
+				this.prClose(i);
+			};
+		}
     }
 
-	setAll { |params|
-		synths.do { |synth, i|
-			var parsed = this.parseParams(i, params);
-			synth.set(*parsed);
-			this.prUpdateParams(i, parsed);
-        };
+	prRelease { |i|
+		if (i >= 0 and: { i < this.size }) {
+			synths[i].free;
+			this.prClose(i);
+		}
 	}
 
-    fadeOut { |i|
-        if(i < this.size, {
-			var synth = synths.removeAt(i);
-            synth.set(\gate, 0);
-			params.removeAt(i);
-        });
-    }
-
-	fadeOutAll {
-		synths.do { |synth|
-			synth.set(\gate, 0);
-        };
-        synths = [];
-		params = [];
+	release { |from, to|
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
+		};
+		if (to.isNil) {
+			this.prRelease(from);
+		} {
+			(from..to).do { |i|
+				this.prRelease(i);
+			};
+		};
 	}
 
-	release { |i|
-		var synth = synths.removeAt(i);
-		synth.free;
-		params.removeAt(i);
+	removeNil {
+		var i = this.size - 1;
+		while (i >= 0) {
+			if (synths[i].isNil) {
+				synths.removeAt(i);
+				params.removeAt(i);
+			};
+			i = i - 1;
+		};
 	}
-
-    releaseAll {
-        synths.do { |synth|
-            synth.free;
-        };
-        synths = [];
-		params = [];
-    }
 
 	asString {
         ^params.asString;
