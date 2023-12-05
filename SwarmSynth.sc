@@ -196,17 +196,18 @@ SwarmSynth {
 		bundle.send;
 	}
 
-	xset { |params, from=nil, to=nil|
+	xset { |params, from=nil, to=nil, fadeTime=nil|
 		var mergedParams;
 		if (params.isKindOf(SwarmMath)) {
 			var m = params;
 			from = 0;
 			to = m.size-1;
+			to = this.prShrink(to, fadeTime);
 			params = { |i, p, j| m.calc(j) };
 		};
 		mergedParams = this.mergeParams(params, from, to);
 		this.closeGate(from, to);
-		this.set(mergedParams, from, to);
+		this.set(mergedParams, from, to, fadeTime: fadeTime);
 	}
 
 	rampTo { |params, duration=1, curve = \exp, from=nil, to=nil, excludeParams=nil|
