@@ -1,7 +1,7 @@
 SwarmMath {
 	var <>freqs, <>partials, <>variations, <>args;
 
-	*freqPartial { |e, mul=1, pow=2, offset=0, add=1|
+	*freqPartial { |e, mul=1, pow=1, offset=0, add=1|
 		^(e.freq * (add+((e.partial+offset).abs*mul)**pow));
 	}
 
@@ -14,11 +14,11 @@ SwarmMath {
 		^value.value(e);
 	}
 
-	*ampPartialRec { |e, offset=0, pow=2|
+	*ampPartialRec { |e, offset=0, pow=1|
 		^(1.0 / ((1 + (e.p+offset).abs)) ** pow);
 	}
 
-	*ampPartialRecMod { |e, mod=2, offset=0, pow=2|
+	*ampPartialRecMod { |e, mod=2, offset=0, pow=1|
 		^(1.0 / (1 + ((e.p+offset).abs % mod) ** pow));
 	}
 
