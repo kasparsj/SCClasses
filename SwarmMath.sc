@@ -1,5 +1,5 @@
 SwarmMath {
-	var <>freqs, <>partials, <>variations, <>math;
+	var <>freqs, <>partials, <>variations, <>args;
 
 	*freqPartial { |e, mul=1, pow=2, offset=0, add=1|
 		^(e.freq * (add+((e.partial+offset).abs*mul)**pow));
@@ -22,27 +22,36 @@ SwarmMath {
 		^(1.0 / (1 + ((e.p+offset).abs % mod) ** pow));
 	}
 
-	*new { |freqs, partials=0, variations=1, math|
-		^super.newCopyArgs(freqs, partials, variations, Dictionary.newFrom(math.asPairs));
+	*new { |freqs, partials=0, variations=1, args|
+		^super.newCopyArgs(freqs, partials, variations, Dictionary.newFrom(args.asPairs));
 	}
 
 	size {
 		^(freqs.size * partials * variations);
 	}
 
-	calc { |i ... params|
+	calc { |i, params=nil|
 		var event = (), result = [];
+		event.freqs = freqs;
 		event.freq = freqs[(i / (partials * variations)).floor];
 		event.partial = (i / variations).floor % partials;
 		event.partial1 = event.partial + 1;
+		event.partials = partials;
 		event.variation = i % variations;
+		event.variations = variations;
 		event.f = event.freq;
 		event.p = event.partial;
+		event.ps = event.partials;
 		event.p1 = event.p + 1;
 		event.v = event.variation;
-		event.size = this.size;
-		params.do { |param|
-			result = result.addAll([param, math[param].(event)]);
+		event.vs = event.variations;
+		event.sz = this.size; // can't call it size
+		event.np = event.partials;
+		event.nv = event.variations;
+		(params ?? args.keys).do { |param|
+			if (args[param].notNil) {
+				result = result.addAll([param, args[param].(event)]);
+			};
 		};
 		^result;
 	}
