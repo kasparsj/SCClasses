@@ -36,7 +36,7 @@ SwarmSynth {
 			synths = synths.addAll(Array.fill(i+1-size, nil));
 		};
 		dict = pairs.asDict;
-		synth = dict.removeAt(\synth) ?? synthDef;
+		synth = dict.removeAt(\instrument) ?? synthDef;
 		params = dict.asPairs;
 		this.prUpdateParams(i, params);
 		// synths[i] = Synth(synthDef, params);
@@ -102,6 +102,7 @@ SwarmSynth {
 		// bundle.messages.postln;
 		//Server.default.sendBundle(Server.default.latency, bundle);
 		//bundle.schedSend(nil, TempoClock.default, 1);
+		// Server.default.addr.sendClumpedBundles(Server.default.latency, *bundle.messages);
 		bundle.send;
 	}
 
@@ -196,7 +197,9 @@ SwarmSynth {
 
 	param { |key|
 		^params.collect { |sp|
-			Dictionary.newFrom(sp)[key];
+			if (sp.notNil) {
+				Dictionary.newFrom(sp)[key];
+			};
 		};
 	}
 }
