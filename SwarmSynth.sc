@@ -209,7 +209,7 @@ SwarmSynth {
 		this.set(mergedParams, from, to);
 	}
 
-	rampTo { |params, duration, curve = \exp, from=nil, to=nil, excludeParams=nil|
+	rampTo { |params, duration=1, curve = \exp, from=nil, to=nil, excludeParams=nil|
 		var startParams, mergedParams;
 		if (params.isKindOf(SwarmMath)) {
 			var m = params;
