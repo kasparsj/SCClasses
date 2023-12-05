@@ -29,15 +29,20 @@ SwarmSynth {
 		params[i] = this.mergeParams(params[i], parsedParams);
 	}
 
-    prCreateSynth { |i, params|
-		var size = synths.size;
+    prCreateSynth { |i, pairs|
+		var size, dict, synth, params;
+		size = synths.size;
 		if (i >= size) {
 			synths = synths.addAll(Array.fill(i+1-size, nil));
 		};
+		dict = pairs.asDict;
+		synth = dict.removeAt(\synth) ?? synthDef;
+		params = dict.asPairs;
 		this.prUpdateParams(i, params);
 		// synths[i] = Synth(synthDef, params);
-		synths[i] = Synth.basicNew(synthDef);
+		synths[i] = Synth.basicNew(synth);
 		^synths[i].newMsg(nil, params);
+		// todo: NodeWatcher?
     }
 
 	prUpdateSynth { |i, params|
