@@ -14,52 +14,51 @@ SwarmSynth {
 	}
 
 	mergeParams { |p1, p2|
-		var dict = Dictionary.newFrom(p1 ? []);
-		(p2 ? []).pairsDo { |key, value|
+		var dict = Dictionary.newFrom(p1 ?? []);
+		(p2 ?? []).pairsDo { |key, value|
 			dict.put(key, value);
 		};
 		^dict.asPairs;
 	}
 
 	prUpdateParams { |i, parsedParams|
-		var size = this.params.size;
+		var size = params.size;
 		if (i >= size) {
-			this.params = this.params.addAll(Array.fill(i+1-size, nil));
+			params = params.addAll(Array.fill(i+1-size, nil));
 		};
-		this.params[i] = this.mergeParams(this.params[i], parsedParams);
+		params[i] = this.mergeParams(params[i], parsedParams);
 	}
 
     prCreateSynth { |i, params|
 		var size = synths.size;
 		if (i >= size) {
-			this.synths = this.synths.addAll(Array.fill(i+1-size, nil));
+			synths = synths.addAll(Array.fill(i+1-size, nil));
 		};
-		this.synths[i] = Synth(this.synthDef, params);
 		this.prUpdateParams(i, params);
+		// synths[i] = Synth(synthDef, params);
+		synths[i] = Synth.basicNew(synthDef);
+		^synths[i].newMsg(nil, params);
     }
 
 	prUpdateSynth { |i, params|
-		synths[i].set(*params);
 		this.prUpdateParams(i, params);
+		// synths[i].set(*params);
+		^synths[i].setMsg(*params);
 	}
 
 	prSet { |i, params, j=0, createIfNotExists=true|
 		var parsed;
-		if (synths[i].isNil) {
+		^if (synths[i].isNil) {
 			if (createIfNotExists) {
 				parsed = this.mergeParams(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
 				this.prCreateSynth(i, parsed);
+			} {
+				nil;
 			}
 		} {
 			parsed = this.parseParams(i, params, j);
 			this.prUpdateSynth(i, parsed);
 		};
-	}
-
-	prXset { |i, params, j=0|
-		var merged = this.mergeParams(this.params[i], this.parseParams(i, params, j));
-		this.closeGate(i);
-		this.set(merged, i);
 	}
 
 	size {
@@ -76,18 +75,29 @@ SwarmSynth {
 	}
 
     set { |params, from, to, createIfNotExists=true|
-		var parsed;
+		var bundle = OSCBundle.new;
+		var parsed, msg;
 		if (from.isNil) {
 			from = 0;
 			to = this.size-1;
 		};
 		if (to.isNil) {
-			this.prSet(from, params, 0, createIfNotExists);
+			// msg = this.prSet(from, params, 0, createIfNotExists);
+			if (msg.notNil) {
+				bundle.add(msg);
+			};
 		} {
 			(from..to).do { |i, j|
-				this.prSet(i, params, j, createIfNotExists);
+				msg = this.prSet(i, params, j, createIfNotExists);
+				if (msg.notNil) {
+					bundle.add(msg);
+				};
 			};
 		};
+		// bundle.messages.postln;
+		//Server.default.sendBundle(Server.default.latency, bundle);
+		//bundle.schedSend(nil, TempoClock.default, 1);
+		bundle.send;
 	}
 
 	xset { |params, from, to|
@@ -97,12 +107,19 @@ SwarmSynth {
 			to = this.size-1;
 		};
 		if (to.isNil) {
-			this.prXset(from, params, 0);
+			merged = this.mergeParams(this.params[from], this.parseParams(from, params, 0));
+
 		} {
+			var mergedParams = Array.newClear(to-from+1);
 			(from..to).do { |i, j|
-				this.prXset(i, params, j);
+				mergedParams[j] = this.mergeParams(this.params[i], this.parseParams(i, params, j));
+			};
+			merged = { |i, p, j|
+				mergedParams[j];
 			};
 		};
+		this.closeGate(from, to);
+		this.set(merged, from, to);
 	}
 
 	fadeIn { |amp=1, from, to|
@@ -170,6 +187,12 @@ SwarmSynth {
 
 	asString {
         ^params.asString;
+	}
+
+	param { |key|
+		^params.collect { |sp|
+			Dictionary.newFrom(sp)[key];
+		};
 	}
 }
 
