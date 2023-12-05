@@ -46,7 +46,7 @@ SwarmSynth {
 		var in = Dictionary.newFrom(start);
 		var out = Dictionary.new;
 		(end ?? []).pairsDo { |key, value|
-			var func = "lin" ++ curve.asString;
+			var func = ("lin" ++ curve.asString).asSymbol;
 			out.put(key, progress.perform(func, 0, 1, in[key], value));
 		};
 		^out.asPairs;
@@ -64,7 +64,7 @@ SwarmSynth {
 		} {
 			var mappedParams = Array.newClear(to-from+1);
 			(from..to).do { |i, j|
-				mappedParams[j] = this.mapPairs(startParams[i], endParams, progress, curve);
+				mappedParams[j] = this.mapPairs(startParams[i], endParams.value(i, params, j), progress, curve);
 			};
 			mapped = { |i, p, j|
 				mappedParams[j];
@@ -132,12 +132,18 @@ SwarmSynth {
 	}
 
     set { |params, from=nil, to=nil, createIfNotExists=true|
-		var bundle = OSCBundle.new;
-		var parsed, msg;
+		var bundle, parsed, msg;
+		if (params.isKindOf(SwarmMath)) {
+			var m = params;
+			from = 0;
+			to = m.size-1;
+			params = { |i, p, j| m.calc(j) };
+		};
 		if (from.isNil) {
 			from = 0;
 			to = this.size-1;
 		};
+		bundle = OSCBundle.new;
 		if (to.isNil) {
 			msg = this.prSet(from, params, 0, createIfNotExists);
 			if (msg.notNil) {
@@ -160,14 +166,28 @@ SwarmSynth {
 	}
 
 	xset { |params, from=nil, to=nil|
-		var mergedParams = this.mergeParams(params, from, to);
+		var mergedParams;
+		if (params.isKindOf(SwarmMath)) {
+			var m = params;
+			from = 0;
+			to = m.size-1;
+			params = { |i, p, j| m.calc(j) };
+		};
+		mergedParams = this.mergeParams(params, from, to);
 		this.closeGate(from, to);
 		this.set(mergedParams, from, to);
 	}
 
 	rampTo { |params, duration, curve = \exp, from=nil, to=nil|
-		var startParams = this.params.copy;
-		var mergedParams = this.mergeParams(params, from, to);
+		var startParams, mergedParams;
+		if (params.isKindOf(SwarmMath)) {
+			var m = params;
+			from = 0;
+			to = m.size-1;
+			params = { |i, p, j| m.calc(j) };
+		};
+		startParams = this.params.copy;
+		mergedParams = this.mergeParams(params, from, to);
 		if (rampRoutine.notNil) {
 			rampRoutine.stop;
 		};
