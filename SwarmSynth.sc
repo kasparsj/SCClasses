@@ -91,23 +91,29 @@ SwarmSynth {
 		synth = dict.removeAt(\instrument) ?? synthDef;
 		params = dict.asPairs;
 		this.prUpdateParams(i, params);
-		// synths[i] = Synth(synthDef, params);
-		synths[i] = Synth.basicNew(synth);
-		^synths[i].newMsg(nil, params);
+		synths[i] = Synth(synthDef, params);
+		// synths[i] = Synth.basicNew(synth);
+		// ^synths[i].newMsg(nil, params);
+		^nil;
 		// todo: NodeWatcher?
     }
 
 	prUpdateSynth { |i, params|
 		this.prUpdateParams(i, params);
-		// synths[i].set(*params);
-		^synths[i].setMsg(*params);
+		synths[i].set(*params);
+		// todo: bundle has issues with late and size
+		// ^synths[i].setMsg(*params);
+		^nil;
 	}
 
-	prSet { |i, params, j=0, createIfNotExists=true|
+	prSet { |i, params, j=0, createNew=true, fadeTime=nil|
 		var parsed;
 		^if (synths[i].isNil) {
-			if (createIfNotExists) {
+			if (createNew) {
 				parsed = this.mergePairs(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
+				if (fadeTime.notNil) {
+					parsed = this.mergePairs(parsed, [\fadeTime, fadeTime]);
+				};
 				this.prCreateSynth(i, parsed);
 			} {
 				nil;
@@ -131,12 +137,32 @@ SwarmSynth {
 		};
 	}
 
-    set { |params, from=nil, to=nil, createIfNotExists=true|
+	prResize { |params, to, fadeTime=nil|
+		if (to > (this.size-1)) {
+			var toCreate = to;
+			to = this.size-1;
+			this.set(params, this.size, toCreate, createNew: true, fadeTime: fadeTime);
+		} {
+			to = this.prShrink(to, fadeTime);
+		};
+		^to;
+	}
+
+	prShrink { |to, fadeTime=nil|
+		if (to < (this.size-1)) {
+			this.closeGate(to+1, this.size-1, fadeTime);
+			^(this.size-1);
+		};
+		^to;
+	}
+
+    set { |params, from=nil, to=nil, createNew=true, fadeTime=nil|
 		var bundle, parsed, msg;
 		if (params.isKindOf(SwarmMath)) {
 			var m = params;
 			from = 0;
 			to = m.size-1;
+			to = this.prShrink(to, fadeTime);
 			params = { |i, p, j| m.calc(j) };
 		};
 		if (from.isNil) {
@@ -145,13 +171,13 @@ SwarmSynth {
 		};
 		bundle = OSCBundle.new;
 		if (to.isNil) {
-			msg = this.prSet(from, params, 0, createIfNotExists);
+			msg = this.prSet(from, params, 0, createNew: createNew, fadeTime: fadeTime);
 			if (msg.notNil) {
 				bundle.add(msg);
 			};
 		} {
 			(from..to).do { |i, j|
-				msg = this.prSet(i, params, j, createIfNotExists);
+				msg = this.prSet(i, params, j, createNew: createNew, fadeTime: fadeTime);
 				if (msg.notNil) {
 					bundle.add(msg);
 				};
@@ -184,7 +210,8 @@ SwarmSynth {
 			var m = params;
 			from = 0;
 			to = m.size-1;
-			params = { |i, p, j| m.calc(j, nil, excludeParams ?? [\phase, \pan]) };
+			this.prResize(params, to, duration);
+			params = { |i, p, j| m.calc(j, nil, (excludeParams ?? [\phase, \pan])) };
 		};
 		startParams = this.params.copy;
 		mergedParams = this.mergeParams(params, from, to);
@@ -205,26 +232,26 @@ SwarmSynth {
 						var rampParams = this.mapParams(startParams, mergedParams, progress, curve, from, to);
 						this.set(rampParams, from, to);
 					};
-					(1.0/60.0).wait;
+					(1.0/30.0).wait;
 				};
 			};
 		}.fork;
 	}
 
-	linRampTo { |params, duration, from=nil, to=nil|
-		this.rampTo(params, duration, \lin, from, to);
+	linRampTo { |params, duration, from=nil, to=nil, excludeParams=nil|
+		this.rampTo(params, duration, \lin, from, to, excludeParams);
 	}
 
-	expRampTo { |params, duration, from=nil, to=nil|
-		this.rampTo(params, duration, \exp, from, to);
+	expRampTo { |params, duration, from=nil, to=nil, excludeParams=nil|
+		this.rampTo(params, duration, \exp, from, to, excludeParams);
 	}
 
 	fadeIn { |amp=1, from=nil, to=nil|
-		this.set([\amp, amp], from, to, false);
+		this.set([\amp, amp], from, to, createNew: false);
 	}
 
 	fadeOut { |from=nil, to=nil|
-		this.set([\amp, 0], from, to, false);
+		this.set([\amp, 0], from, to, createNew: false);
 	}
 
 	prClose { |i|
@@ -234,8 +261,12 @@ SwarmSynth {
 		};
 	}
 
-    closeGate { |from=nil, to=nil|
-		this.set([\gate, 0], from, to, false);
+    closeGate { |from=nil, to=nil, fadeTime=nil|
+		var params = [\gate, 0];
+		if (fadeTime.notNil) {
+			params = params.addAll([\fadeTime, fadeTime]);
+		};
+		this.set(params, from, to, createNew: false);
 		if (from.isNil) {
 			from = 0;
 			to = this.size-1;
@@ -247,7 +278,8 @@ SwarmSynth {
 			(from..to).do { |i, j|
 				this.prClose(i);
 			};
-		}
+		};
+		this.prCleanUp;
     }
 
 	prRelease { |i|
@@ -269,14 +301,27 @@ SwarmSynth {
 				this.prRelease(i);
 			};
 		};
+		this.prCleanUp;
+	}
+
+	prRemove { |i|
+		synths.removeAt(i);
+		params.removeAt(i);
+	}
+
+	prCleanUp {
+		var i = this.size - 1;
+		while ({ i >= 0 and: { synths[i].isNil } }) {
+			this.prRemove(i);
+			i = i - 1;
+		};
 	}
 
 	removeNil {
 		var i = this.size - 1;
 		while ({ i >= 0 }) {
 			if (synths[i].isNil) {
-				synths.removeAt(i);
-				params.removeAt(i);
+				this.prRemove(i);
 			};
 			i = i - 1;
 		};
