@@ -30,7 +30,7 @@ SwarmMath {
 		^(freqs.size * partials * variations);
 	}
 
-	calc { |i, params=nil|
+	calc { |i, params=nil, excludeParams=nil|
 		var event = (), result = [];
 		event.freqs = freqs;
 		event.freq = freqs[(i / (partials * variations)).floor];
@@ -48,7 +48,7 @@ SwarmMath {
 		event.sz = this.size; // can't call it size
 		event.np = event.partials;
 		event.nv = event.variations;
-		(params ?? args.keys).do { |param|
+		((params ?? args.keys).asSet -- (excludeParams ?? []).asSet).do { |param|
 			if (args[param].notNil) {
 				result = result.addAll([param, args[param].(event)]);
 			};

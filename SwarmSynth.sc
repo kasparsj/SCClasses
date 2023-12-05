@@ -47,7 +47,7 @@ SwarmSynth {
 		var out = Dictionary.new;
 		(end ?? []).pairsDo { |key, value|
 			var func = ("lin" ++ curve.asString).asSymbol;
-			out.put(key, progress.perform(func, 0, 1, in[key], value));
+			out.put(key, progress.perform(func, 0, 1, in[key] ?? 0, value));
 		};
 		^out.asPairs;
 	}
@@ -178,13 +178,13 @@ SwarmSynth {
 		this.set(mergedParams, from, to);
 	}
 
-	rampTo { |params, duration, curve = \exp, from=nil, to=nil|
+	rampTo { |params, duration, curve = \exp, from=nil, to=nil, excludeParams=nil|
 		var startParams, mergedParams;
 		if (params.isKindOf(SwarmMath)) {
 			var m = params;
 			from = 0;
 			to = m.size-1;
-			params = { |i, p, j| m.calc(j) };
+			params = { |i, p, j| m.calc(j, nil, excludeParams ?? [\phase, \pan]) };
 		};
 		startParams = this.params.copy;
 		mergedParams = this.mergeParams(params, from, to);
@@ -205,7 +205,7 @@ SwarmSynth {
 						var rampParams = this.mapParams(startParams, mergedParams, progress, curve, from, to);
 						this.set(rampParams, from, to);
 					};
-					(1.0/30.0).wait;
+					(1.0/60.0).wait;
 				};
 			};
 		}.fork;
