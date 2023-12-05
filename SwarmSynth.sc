@@ -141,6 +141,11 @@ SwarmSynth {
 		if (to > (this.size-1)) {
 			var toCreate = to;
 			to = this.size-1;
+			// make sure from/to won't be replaced
+			if (params.isKindOf(SwarmMath)) {
+				var m = params;
+				params = { |i, p, j| m.calc(j) };
+			};
 			this.set(params, this.size, toCreate, createNew: true, fadeTime: fadeTime);
 		} {
 			to = this.prShrink(to, fadeTime);
