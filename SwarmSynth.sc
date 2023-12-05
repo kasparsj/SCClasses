@@ -1,5 +1,5 @@
 SwarmSynth {
-    var <>synthDef, <>defaultParams, <>synths, <>params;
+    var <>synthDef, <>defaultParams, <>synths, <>params, <>rampRoutine;
 
     *new { |synthDef, defaultParams|
 		^super.newCopyArgs(synthDef, defaultParams, [], []);
@@ -13,7 +13,7 @@ SwarmSynth {
 		}
 	}
 
-	mergeParams { |p1, p2|
+	mergePairs { |p1, p2|
 		var dict = Dictionary.newFrom(p1 ?? []);
 		(p2 ?? []).pairsDo { |key, value|
 			dict.put(key, value);
@@ -21,12 +21,64 @@ SwarmSynth {
 		^dict.asPairs;
 	}
 
+	mergeParams { |params, from=nil, to=nil|
+		var merged;
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
+		};
+		if (to.isNil) {
+			merged = this.mergePairs(this.params[from], this.parseParams(from, params, 0));
+
+		} {
+			var mergedParams = Array.newClear(to-from+1);
+			(from..to).do { |i, j|
+				mergedParams[j] = this.mergePairs(this.params[i], this.parseParams(i, params, j));
+			};
+			merged = { |i, p, j|
+				mergedParams[j];
+			};
+		};
+		^merged;
+	}
+
+	mapPairs { |start, end, progress, curve=\exp|
+		var in = Dictionary.newFrom(start);
+		var out = Dictionary.new;
+		(end ?? []).pairsDo { |key, value|
+			var func = "lin" ++ curve.asString;
+			out.put(key, progress.perform(func, 0, 1, in[key], value));
+		};
+		^out.asPairs;
+	}
+
+	mapParams { |startParams, endParams, progress, curve=\exp, from=nil, to=nil|
+		var mapped;
+		if (from.isNil) {
+			from = 0;
+			to = this.size-1;
+		};
+		if (to.isNil) {
+			mapped = this.mapPairs(startParams[from], endParams, progress, curve);
+
+		} {
+			var mappedParams = Array.newClear(to-from+1);
+			(from..to).do { |i, j|
+				mappedParams[j] = this.mapPairs(startParams[i], endParams, progress, curve);
+			};
+			mapped = { |i, p, j|
+				mappedParams[j];
+			};
+		};
+		^mapped;
+	}
+
 	prUpdateParams { |i, parsedParams|
 		var size = params.size;
 		if (i >= size) {
 			params = params.addAll(Array.fill(i+1-size, nil));
 		};
-		params[i] = this.mergeParams(params[i], parsedParams);
+		params[i] = this.mergePairs(params[i], parsedParams);
 	}
 
     prCreateSynth { |i, pairs|
@@ -55,7 +107,7 @@ SwarmSynth {
 		var parsed;
 		^if (synths[i].isNil) {
 			if (createIfNotExists) {
-				parsed = this.mergeParams(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
+				parsed = this.mergePairs(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
 				this.prCreateSynth(i, parsed);
 			} {
 				nil;
@@ -79,7 +131,7 @@ SwarmSynth {
 		};
 	}
 
-    set { |params, from, to, createIfNotExists=true|
+    set { |params, from=nil, to=nil, createIfNotExists=true|
 		var bundle = OSCBundle.new;
 		var parsed, msg;
 		if (from.isNil) {
@@ -87,7 +139,7 @@ SwarmSynth {
 			to = this.size-1;
 		};
 		if (to.isNil) {
-			// msg = this.prSet(from, params, 0, createIfNotExists);
+			msg = this.prSet(from, params, 0, createIfNotExists);
 			if (msg.notNil) {
 				bundle.add(msg);
 			};
@@ -103,36 +155,55 @@ SwarmSynth {
 		//Server.default.sendBundle(Server.default.latency, bundle);
 		//bundle.schedSend(nil, TempoClock.default, 1);
 		// Server.default.addr.sendClumpedBundles(Server.default.latency, *bundle.messages);
+		// todo: fix error bundle too long
 		bundle.send;
 	}
 
-	xset { |params, from, to|
-		var merged;
-		if (from.isNil) {
-			from = 0;
-			to = this.size-1;
-		};
-		if (to.isNil) {
-			merged = this.mergeParams(this.params[from], this.parseParams(from, params, 0));
-
-		} {
-			var mergedParams = Array.newClear(to-from+1);
-			(from..to).do { |i, j|
-				mergedParams[j] = this.mergeParams(this.params[i], this.parseParams(i, params, j));
-			};
-			merged = { |i, p, j|
-				mergedParams[j];
-			};
-		};
+	xset { |params, from=nil, to=nil|
+		var mergedParams = this.mergeParams(params, from, to);
 		this.closeGate(from, to);
-		this.set(merged, from, to);
+		this.set(mergedParams, from, to);
 	}
 
-	fadeIn { |amp=1, from, to|
+	rampTo { |params, duration, curve = \exp, from=nil, to=nil|
+		var startParams = this.params.copy;
+		var mergedParams = this.mergeParams(params, from, to);
+		if (rampRoutine.notNil) {
+			rampRoutine.stop;
+		};
+		rampRoutine = {
+			var startTime = thisThread.seconds;
+			block {|break|
+				inf.do {
+					var time = thisThread.seconds;
+					var delta = time - startTime;
+					if (delta >= duration) {
+						this.set(params, from, to);
+						break.value;
+					} {
+						var progress = delta / duration;
+						var rampParams = this.mapParams(startParams, mergedParams, progress, curve, from, to);
+						this.set(rampParams, from, to);
+					};
+					(1.0/30.0).wait;
+				};
+			};
+		}.fork;
+	}
+
+	linRampTo { |params, duration, from=nil, to=nil|
+		this.rampTo(params, duration, \lin, from, to);
+	}
+
+	expRampTo { |params, duration, from=nil, to=nil|
+		this.rampTo(params, duration, \exp, from, to);
+	}
+
+	fadeIn { |amp=1, from=nil, to=nil|
 		this.set([\amp, amp], from, to, false);
 	}
 
-	fadeOut { |from, to|
+	fadeOut { |from=nil, to=nil|
 		this.set([\amp, 0], from, to, false);
 	}
 
@@ -143,7 +214,7 @@ SwarmSynth {
 		};
 	}
 
-    closeGate { |from, to|
+    closeGate { |from=nil, to=nil|
 		this.set([\gate, 0], from, to, false);
 		if (from.isNil) {
 			from = 0;
@@ -166,7 +237,7 @@ SwarmSynth {
 		}
 	}
 
-	release { |from, to|
+	release { |from=nil, to=nil|
 		if (from.isNil) {
 			from = 0;
 			to = this.size-1;
