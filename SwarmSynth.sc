@@ -210,7 +210,7 @@ SwarmSynth {
 			var m = params;
 			from = 0;
 			to = m.size-1;
-			this.prResize(params, to, duration);
+			to = this.prResize(params, to, duration);
 			params = { |i, p, j| m.calc(j, nil, (excludeParams ?? [\phase, \pan])) };
 		};
 		startParams = this.params.copy;
