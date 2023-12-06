@@ -273,7 +273,9 @@ SwarmSynth {
 
 	prClose { |i|
 		if (i >= 0 and: { i < this.size }) {
-			NodeWatcher.unregister(synths[i]);
+			if (synths[i].notNil) {
+				NodeWatcher.unregister(synths[i]);
+			};
 			synths[i] = nil;
 			params[i] = nil;
 		};
