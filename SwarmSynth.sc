@@ -98,9 +98,9 @@ SwarmSynth {
 		this.prUpdateParams(i, params);
 		synths[i] = Synth(synthDef, params);
 		// synths[i] = Synth.basicNew(synth);
+		NodeWatcher.register(synths[i]);
 		// ^synths[i].newMsg(nil, params);
 		^nil;
-		// todo: NodeWatcher?
     }
 
 	prUpdateSynth { |i, params|
@@ -113,7 +113,7 @@ SwarmSynth {
 
 	prSet { |i, params, j=0, createNew=true, fadeTime=nil|
 		var parsed;
-		^if (synths[i].isNil) {
+		^if (synths[i].isNil or: { synths[i].isPlaying.not }) {
 			if (createNew) {
 				parsed = this.mergePairs(this.parseParams(i, this.defaultParams, j), this.parseParams(i, params, j));
 				if (fadeTime.notNil) {
@@ -267,6 +267,7 @@ SwarmSynth {
 
 	prClose { |i|
 		if (i >= 0 and: { i < this.size }) {
+			NodeWatcher.unregister(synths[i]);
 			synths[i] = nil;
 			params[i] = nil;
 		};
