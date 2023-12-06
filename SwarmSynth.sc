@@ -47,7 +47,12 @@ SwarmSynth {
 		var out = Dictionary.new;
 		(end ?? []).pairsDo { |key, value|
 			var func = ("lin" ++ curve.asString).asSymbol;
-			out.put(key, progress.perform(func, 0, 1, in[key] ?? 0, value));
+			var def = if (curve == \exp, value, 0);
+			var v = progress.perform(func, 0, 1, in[key] ?? def, value);
+			if (v.isNaN) {
+				v = value;
+			};
+			out.put(key, v);
 		};
 		^out.asPairs;
 	}
@@ -144,7 +149,7 @@ SwarmSynth {
 			// make sure from/to won't be replaced
 			if (params.isKindOf(SwarmMath)) {
 				var m = params;
-				params = { |i, p, j| m.calc(j) };
+				params = { |i, p, j| m.calc(i) };
 			};
 			this.set(params, this.size, toCreate, createNew: true, fadeTime: fadeTime);
 		} {
@@ -168,7 +173,7 @@ SwarmSynth {
 			from = 0;
 			to = m.size-1;
 			to = this.prShrink(to, fadeTime);
-			params = { |i, p, j| m.calc(j) };
+			params = { |i, p, j| m.calc(i) };
 		};
 		if (from.isNil) {
 			from = 0;
@@ -203,7 +208,7 @@ SwarmSynth {
 			from = 0;
 			to = m.size-1;
 			to = this.prShrink(to, fadeTime);
-			params = { |i, p, j| m.calc(j) };
+			params = { |i, p, j| m.calc(i) };
 		};
 		mergedParams = this.mergeParams(params, from, to);
 		this.closeGate(from, to);
@@ -217,7 +222,7 @@ SwarmSynth {
 			from = 0;
 			to = m.size-1;
 			to = this.prResize(params, to, duration);
-			params = { |i, p, j| m.calc(j, nil, (excludeParams ?? [\phase, \pan])) };
+			params = { |i, p, j| m.calc(i, nil, (excludeParams ?? [\phase, \pan])) };
 		};
 		startParams = this.params.copy;
 		mergedParams = this.mergeParams(params, from, to);
