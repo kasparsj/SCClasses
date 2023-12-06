@@ -78,36 +78,42 @@ SwarmSynth {
 		^mapped;
 	}
 
-	prUpdateParams { |i, parsedParams|
+	prResizeSynths { |i|
+		var size = synths.size;
+		if (i >= size) {
+			synths = synths.addAll(Array.fill(i+1-size, nil));
+		};
+	}
+
+	prResizeParams { |i|
 		var size = params.size;
 		if (i >= size) {
 			params = params.addAll(Array.fill(i+1-size, nil));
 		};
-		params[i] = this.mergePairs(params[i], parsedParams);
 	}
 
     prCreateSynth { |i, pairs|
-		var size, dict, synth, params;
-		size = synths.size;
-		if (i >= size) {
-			synths = synths.addAll(Array.fill(i+1-size, nil));
-		};
+		var dict, synth, merged;
 		dict = pairs.asDict;
 		synth = dict.removeAt(\instrument) ?? synthDef;
-		params = dict.asPairs;
-		this.prUpdateParams(i, params);
-		synths[i] = Synth(synthDef, params);
+		merged = this.mergePairs(params[i], dict.asPairs);
+		this.prClose(i);
+		this.prResizeParams(i);
+		params[i] = merged;
+		this.prResizeSynths(i);
+		synths[i] = Synth(synthDef, merged);
 		// synths[i] = Synth.basicNew(synth);
 		NodeWatcher.register(synths[i]);
-		// ^synths[i].newMsg(nil, params);
+		// ^synths[i].newMsg(nil, merged);
 		^nil;
     }
 
-	prUpdateSynth { |i, params|
-		this.prUpdateParams(i, params);
-		synths[i].set(*params);
+	prUpdateSynth { |i, pairs|
+		this.prResizeParams(i);
+		this.params[i] = this.mergePairs(this.params[i], pairs);
+		synths[i].set(*pairs);
 		// todo: bundle has issues with late and size
-		// ^synths[i].setMsg(*params);
+		// ^synths[i].setMsg(*pairs);
 		^nil;
 	}
 
