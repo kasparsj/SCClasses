@@ -3,11 +3,13 @@ SoundTrack {
 	var <beats;
 	var <mode;
 	var <seq;
+	var <from, <to, <loop;
 	var <isPlaying = false;
 	var <isPaused = false;
 
 	*new { |video, beats, mode|
 		var inst = super.newCopyArgs(video, beats, mode ? \beats);
+		inst.initSeq;
 		CmdPeriod.add({
 			if (inst.isPlaying, {
 				inst.stop();
@@ -16,47 +18,56 @@ SoundTrack {
 		^inst;
 	}
 
-	play { |from, to, loop|
-		var beats1;
-		from = from ? 0;
-		to = to ? (beats.size - 1);
-		loop = loop ? true;
+	initSeq { |from_, to_, loop_|
+		from_ = from_ ? 0;
+		to_ = to_ ? (beats.size - 1);
+		loop_ = loop_ ? true;
 		if (seq != nil) {
 			seq.stop;
 		};
-		if (mode == \beats) {
-			beats1 = beats[from..to];
-		} {
-			beats1 = beats[1..][from..to];
-			if (from > 0) {
-				beats1 = beats1 - beats[1..][from-1];
+		if (from != from_ or: { to != to_ or: { loop != loop_ } }) {
+			var beats1;
+			from = from_;
+			to = to_;
+			loop = loop_;
+			if (mode == \beats) {
+				beats1 = beats[from..to];
+			} {
+				beats1 = beats[1..][from..to];
+				if (from > 0) {
+					beats1 = beats1 - beats[1..][from-1];
+				};
 			};
-		};
-		seq = RedSeq((from..to), beats1, mode);
-		seq.onStop = {
-			this.prStop();
-		};
-		seq.onLoop = {
-			if (loop, {
-				this.prPlay(from);
-			}, {
+			seq = RedSeq((from..to), beats1, mode);
+			seq.onStop = {
 				this.prStop();
-			});
-		};
-		seq.onGoto = { |scheduled|
-			if (scheduled != true) {
-				video.seek(beats[seq.currentSection]);
+			};
+			seq.onLoop = {
+				if (loop, {
+					this.prPlay(from);
+				}, {
+					this.prStop();
+				});
+			};
+			seq.onGoto = { |scheduled|
+				if (scheduled != true) {
+					video.seek(beats[seq.currentSection]);
+				};
+			};
+			seq.onPause = {
+				isPaused = true;
+				video.pause();
+			};
+			seq.onResume = {
+				isPaused = false;
+				video.resume();
 			};
 		};
-		seq.onPause = {
-			isPaused = true;
-			video.pause();
-		};
-		seq.onResume = {
-			isPaused = false;
-			video.resume();
-		};
-		this.prPlay(from);
+	}
+
+	play { |from, to, loop|
+		this.initSeq(from, to, loop);
+		this.prPlay(this.from);
 	}
 
 	prPlay { |from|
