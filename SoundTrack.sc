@@ -1,14 +1,13 @@
 SoundTrack {
 	var <video;
-	var <beats;
-	var <mode;
+	var <score;
 	var <seq;
 	var <from, <to, <loop;
 	var <isPlaying = false;
 	var <isPaused = false;
 
-	*new { |video, beats, mode|
-		var inst = super.newCopyArgs(video, beats, mode ? \beats);
+	*new { |video, score|
+		var inst = super.newCopyArgs(video, score);
 		inst.initSeq;
 		CmdPeriod.add({
 			if (inst.isPlaying, {
@@ -18,40 +17,25 @@ SoundTrack {
 		^inst;
 	}
 
-	initSeq { |from_, to_, loop_|
-		from_ = from_ ? 0;
-		to_ = to_ ? (beats.size - 1);
-		loop_ = loop_ ? true;
+	initSeq { |argFrom, argTo, argLoop|
+		argFrom = argFrom ? 0;
+		argTo = argTo ? (score.size - 1);
+		argLoop = argLoop ? true;
 		if (seq != nil) {
 			seq.stop;
 		};
-		if (from != from_ or: { to != to_ or: { loop != loop_ } }) {
-			var beats1;
-			from = from_;
-			to = to_;
-			loop = loop_;
-			if (mode == \beats) {
-				beats1 = beats[from..to];
-			} {
-				beats1 = beats[1..][from..to];
-				if (from > 0) {
-					beats1 = beats1 - beats[1..][from-1];
-				};
-			};
-			seq = RedSeq((from..to), beats1, mode);
+		if (from != argFrom or: { to != argTo or: { loop != argLoop } }) {
+			from = argFrom;
+			to = argTo;
+			loop = argLoop;
+			seq = score.createSeq(from, to, loop);
 			seq.onStop = {
-				this.prStop();
-			};
-			seq.onLoop = {
-				if (loop, {
-					this.prPlay(from);
-				}, {
-					this.prStop();
-				});
+				this.prStop;
 			};
 			seq.onGoto = { |scheduled|
+				this.prPlay;
 				if (scheduled != true) {
-					video.seek(beats[seq.currentSection]);
+					video.seek(score.beats[seq.currentSection]);
 				};
 			};
 			seq.onPause = {
@@ -63,25 +47,26 @@ SoundTrack {
 				video.resume();
 			};
 		};
+		^seq;
 	}
 
-	play { |from, to, loop|
-		this.initSeq(from, to, loop);
-		this.prPlay(this.from);
-	}
-
-	prPlay { |from|
-		var start = 0;
-		isPlaying = true;
+	play {
 		seq.play;
-		if (mode == \beats) {
-			if (from > 0) {
-				start = beats[0..(from-1)].sum * (1.0 / RedMst.clock.tempo);
+	}
+
+	prPlay {
+		if (isPlaying.not) {
+			var start = 0;
+			isPlaying = true;
+			if (seq.mode == \beats) {
+				if (from > 0) {
+					start = score.beats[0..(from-1)].sum * (1.0 / RedMst.clock.tempo);
+				};
+			} {
+				start = score.beats[from];
 			};
-		} {
-			start = beats[from];
+			video.play(start);
 		};
-		video.play(start);
 	}
 
 	prStop {
@@ -109,11 +94,11 @@ SoundTrack {
 		seq.resume;
 	}
 
-	prevSection {
+	prev {
 		seq.prev;
 	}
 
-	nextSection {
+	next {
 		seq.next;
 	}
 }
